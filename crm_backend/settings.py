@@ -10,73 +10,125 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
+
+from decouple import config
+
+from crm_backend.spectacular import SPECTACULAR_SETTINGS_
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+DISABLED_AUTHENTICATION = config("DISABLED_AUTHENTICATION", cast=bool, default=False)
+SESSION_AUTHENTICATION = config("SESSION_AUTHENTICATION", cast=bool, default=True)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-fq17dqj7^wq#8lu4=&y)!%-s&3g3r=_2!yi89@60&t9*nrp-75'
+SECRET_KEY = "django-insecure-fq17dqj7^wq#8lu4=&y)!%-s&3g3r=_2!yi89@60&t9*nrp-75"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")], default="*"
+)
 
+THIRD_PARTY_APPS = [
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "drf_spectacular",
+    "django_filters",
+    "djangorestframework_camel_case",
+    "corsheaders",
+    "nepali_datetime",
+]
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
 ]
+
+LOCAL_APPS = [
+    "apps.authentication",
+    # "apps.customer",
+    # "apps.location",
+    "apps.api_logs",
+    # "apps.core",
+]
+INSTALLED_APPS += LOCAL_APPS
+INSTALLED_APPS += THIRD_PARTY_APPS
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_user_agents.middleware.UserAgentMiddleware",
+    "djangorestframework_camel_case.middleware.CamelCaseMiddleWare",
 ]
 
-ROOT_URLCONF = 'crm_backend.urls'
+ROOT_URLCONF = "crm_backend.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'crm_backend.wsgi.application'
+WSGI_APPLICATION = "crm_backend.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": {
+        # "ENGINE": "django.db.backends.postgresql_psycopg3",
+        "ENGINE": "django.db.backends.postgresql",
+        # "ENGINE": "django_tenants.postgresql_backend",
+        "NAME": config("DB_NAME"),
+        "USER": config("DB_USER"),
+        "PASSWORD": config("DB_PASSWORD"),
+        "HOST": "crm_db",
+        "PORT": "5432",
+        "ATOMIC_REQUESTS": True,
+        # https://docs.djangoproject.com/en/5.1/ref/databases/#persistent-connections
+        # "DISABLE_SERVER_SIDE_CURSORS": True,
+        # "OPTIONS": {
+        #     # "pool": True,
+        #     "sslmode": "disable",
+        #     "client_encoding": "UTF8",
+        # },
+        "CONN_MAX_AGE": 0,  # Since we are using pooling, this should be disabled.
+    },
 }
 
 
@@ -85,26 +137,167 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
+SIMPLE_JWT_CONFIGS = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ALGORITHM": config("TOKEN_ALGORITHM", default="HS256"),
+    "SIGNING_KEY": config("TOKEN_SIGNING_KEY", default="my_top_secret"),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": False,
+    "VERIFYING_KEY": None,
+    "AUDIENCE": None,
+    "ISSUER": None,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "crm_backend.pagination.CustomPagePagination",
+    "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ),
+    # "DEFAULT_AUTHENTICATION_CLASSES": (
+    #     "rest_framework_simplejwt.authentication.JWTAuthentication",
+    #     # "rest_framework.authentication.SessionAuthentication",
+    # ),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        (
+            "rest_framework_simplejwt.authentication.JWTAuthentication",
+            "rest_framework.authentication.SessionAuthentication",
+        )
+        if SESSION_AUTHENTICATION
+        else (
+            "rest_framework_simplejwt.authentication.JWTAuthentication",
+            "rest_framework.authentication.SessionAuthentication",
+        )
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        []
+        if DISABLED_AUTHENTICATION
+        else [
+            "rest_framework.permissions.IsAuthenticated",
+        ]
+    ),
+    "DEFAULT_RENDERER_CLASSES": (
+        (
+            "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+            "djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer",
+        )
+        if DEBUG
+        else (
+            "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+            "rest_framework.renderers.JSONRenderer",
+        )
+    ),
+    "DEFAULT_PARSER_CLASSES": (
+        "base.parsers.parser.CustomNestedParser",
+        "djangorestframework_camel_case.parser.CamelCaseFormParser",
+        "djangorestframework_camel_case.parser.CamelCaseJSONParser",
+    ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "public_get": "5/second",
+        "public_post": "2/second",
+        "public_login": "5/min",
+        "public_patch": "2/min",
+        "public_delete": "1/min",
+        "auth_get": "10/second",
+        "auth_list": "5/second",
+        "auth_post": "5/second",
+        "auth_patch": "5/second",
+        "auth_delete": "5/second",
+    },
+    "NUM_PROXIES": config(
+        "NUM_PROXIES",
+        cast=int,
+        default=0,
+    ),
+    # "EXCEPTION_HANDLER": "apps.core_app.exception_handlers.custom_exception_handler",
+}
+
+# In mb
+MAX_UPLOAD_SIZE = config("MAX_UPLOAD_SIZE", cast=int, default=2 * 1024 * 1024)  # 2 MB
+APPEND_SLASH = False
+
+
+DECIMAL_MAX_DIGITS = config("DECIMAL_MAX_DIGITS", cast=int, default=16)
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "nTags Bank APIs",
+    "DESCRIPTION": "nTags Bank Backend API Documentation",
+    "VERSION": "1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # "SERVE_PERMISSIONS": [
+    #     (
+    #         "rest_framework.permissions.IsAuthenticated"
+    #         if config("DEBUG", cast=bool, default=False)
+    #         else "ibisap_backend.custom_permissions.IsAdminOrSuperUser"
+    #     )
+    # ],
+    "SCHEMA_PATH_PREFIX_TRIM": False,
+    "SCHEMA_PATH_PREFIX": "/api/v1/",
+    # 'SCHEMA_PATH_PREFIX': None,
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields",
+    ],
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "operationsSorter": "method",
+        "tagsSorter": "alpha",
+        # "tagsSorter": "(a, b) => a.localeCompare(b)",
+        "supportedSubmitMethods": [
+            "get",
+            "post",
+            "put",
+            "patch",
+            "delete",
+            "options",
+            "head",
+        ],
+        "docExpansion": "none",
+        "apisSorter": "alpha",
+        "showRequestHeaders": False,
+        "filter": True,  # Enable filtering
+        "deepLinking": True,
+        "requestContentType": "multipart/form-data",
+        "displayRequestDuration": True,
+        "showExtensions": True,
+        # "enableThemeToggle": True,
+        # "displayOperationId": True,
+    },
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -114,14 +307,28 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "mediafiles"
 
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    "default": {
+        "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
+
+AUTH_USER_MODEL = "authentication.CustomUser"
+
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",")],
+)
+SPECTACULAR_SETTINGS = SPECTACULAR_SETTINGS_
